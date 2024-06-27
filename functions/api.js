@@ -3,6 +3,8 @@ const cors = require("cors");
 const Moralis = require("moralis").default;
 const { EvmChain } = require("@moralisweb3/common-evm-utils");
 
+const serverless = require('serverless-http');
+
 require('dotenv').config();
 
 const app = express();
@@ -10,24 +12,27 @@ const port = 3000;
 
 app.use(cors())
 
+
 // Add a variable for the api key and chain
 const MORALIS_API_KEY = process.env.MORALIS_API_KEY;
 const chain = EvmChain.ETHEREUM;
 
-app.get("/getEthPrice", async (req, res) => {
+app.get("/.netlify/functions/api/getEthPrice", async (req, res) => {
   try {
     const response = await Moralis.EvmApi.token.getTokenPrice({
       address: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      chain: chain
-    })
+      chain: "0x1",
+    });
+
     return res.status(200).json(response);
   } catch (err) {
-    return res.status(400).json({ "Error": err });
+    console.log(`Error: ${err}`);
+    return res.status(400).json();
   }
 });
 
 
-app.get('/getTransactionsByAddress', async (req, res) => {
+app.get('/.netlify/functions/api/getTransactionsByAddress', async (req, res) => {
   try {
     const { query } = req;
     const address = query.address;
@@ -45,7 +50,7 @@ app.get('/getTransactionsByAddress', async (req, res) => {
   }
 })
 
-app.get("/getBlockInfo", async (req, res) => {
+app.get("/.netlify/functions/api/getLatestBlocks", async (req, res) => {
   try {
     const latestBlock = await Moralis.EvmApi.block.getDateToBlock({
       date: Date.now(),
@@ -102,8 +107,16 @@ const startServer = async () => {
   });
 
   app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log(`Example app listening on port ${port}`);
   });
 };
 
 startServer();
+
+
+const handler = serverless(app)
+// app.use('/.netlify/functions/api', router);
+module.exports.handler = async (event, context) => {
+  const result = await handler(event, context)
+  return result
+};
